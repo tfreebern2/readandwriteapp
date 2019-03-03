@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:async';
-import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() async {
-  var data = await readData();
-
-  if (data != null) {
-    String message = await readData();
-    print(message);
-  }
-
+void main() {
   runApp(MaterialApp(
-    title: 'IO',
+    title: 'SharedPrefs',
     home: Home(),
   ));
 }
@@ -24,12 +15,38 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   var _enterDataField = new TextEditingController();
+  String _savedData = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedData();
+  }
+
+  _loadSavedData() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+
+    setState(() {
+      if (preferences.getString('data').isNotEmpty && preferences.getString('data') != null) {
+        _savedData = preferences.getString("data");
+      } else {
+        _savedData = "Empty SP";
+      }
+
+    });
+  }
+
+  _saveMessage(String message) async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    preferences.setString('data', message); // key : value ==> "paulo" : "smart"
+
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Read/Write'),
+        title: Text('SharedPrefs'),
         centerTitle: true,
         backgroundColor: Colors.green,
       ),
@@ -48,62 +65,30 @@ class _HomeState extends State<Home> {
                 child: Text('Save Data'),
                 color: Colors.green,
                 onPressed: () {
-                  writeData(_enterDataField.text);
+                  _saveMessage(_enterDataField.text);
                 },
               ),
               Padding(
                 padding: EdgeInsets.all(14.5),
               ),
-              FutureBuilder(
-                future: readData(),
-                builder: (BuildContext context, AsyncSnapshot<String> data) {
-                  if (data.hasData != null) {
-                    return Text(
-                      data.data.toString(),
-                      style: TextStyle(color: Colors.blueAccent),
-                    );
-                  } else {
-                    return Text("No data saved");
-                  }
-                },
-              )
+              Text(_savedData),
+//              FutureBuilder(
+//                future: readData(),
+//                builder: (BuildContext context, AsyncSnapshot<String> data) {
+//                  if (data.hasData != null) {
+//                    return Text(
+//                      data.data.toString(),
+//                      style: TextStyle(color: Colors.blueAccent),
+//                    );
+//                  } else {
+//                    return Text("No data saved");
+//                  }
+//                },
+//              )
             ],
           ),
         ],
       ),
     );
-  }
-}
-
-Future<String> get _localPath async {
-  final directory = await getApplicationDocumentsDirectory();
-  return directory.path; //home/directory/
-}
-
-Future<File> get _localFile async {
-  final path = await _localPath;
-
-  return new File('$path/data.txt'); //home/directory/data.txt
-}
-
-// Write and Read from text file
-Future<File> writeData(String message) async {
-  final file = await _localFile;
-
-  return file.writeAsString('$message');
-}
-
-Future<String> readData() async {
-  try {
-    final file = await _localFile;
-
-    // read
-    String data = await file.readAsString();
-
-    return data;
-  } catch (e) {
-    debugPrint(e.toString());
-
-    return 'Nothing saved!!';
   }
 }
